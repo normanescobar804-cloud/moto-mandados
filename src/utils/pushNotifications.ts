@@ -13,6 +13,7 @@ export interface UrgentPushPayload {
 
 let swInitialized = false;
 let activeRegistration: ServiceWorkerRegistration | null = null;
+const BASE_URL = import.meta.env.BASE_URL || '/';
 
 export function isBrowserPushSupported(): boolean {
   return (
@@ -68,9 +69,12 @@ export async function ensureServiceWorkerReady(): Promise<ServiceWorkerRegistrat
       activeRegistration = existing;
       return existing;
     }
-    const fallbackReg = await navigator.serviceWorker.register('/sw-push.js', {
-      scope: '/',
-    });
+    const fallbackReg = await navigator.serviceWorker.register(
+      `${BASE_URL}sw-push.js`,
+      {
+        scope: BASE_URL,
+      }
+    );
     activeRegistration = fallbackReg;
     return fallbackReg;
   } catch {
@@ -285,12 +289,12 @@ export async function showBrowserNotificationDetailed(
     try {
       await reg.showNotification(payload.title, {
         body: payload.body,
-        icon: '/pwa-192x192.png',
-        badge: '/pwa-192x192.png',
+        icon: `${BASE_URL}pwa-192x192.png`,
+        badge: `${BASE_URL}pwa-192x192.png`,
         tag,
         requireInteraction: payload.isUrgent !== false,
         data: {
-          url: payload.url || '/',
+          url: payload.url || BASE_URL,
           deliveryId: payload.deliveryId || '',
           isUrgent: payload.isUrgent !== false,
         },
@@ -310,7 +314,7 @@ export async function showBrowserNotificationDetailed(
   try {
     const n = new Notification(payload.title, {
       body: payload.body,
-      icon: '/pwa-192x192.png',
+      icon: `${BASE_URL}pwa-192x192.png`,
       tag,
       requireInteraction: payload.isUrgent !== false,
     });

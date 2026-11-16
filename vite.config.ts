@@ -7,7 +7,10 @@ import { VitePWA } from 'vite-plugin-pwa';
 export default defineConfig(() => {
   const disableHmr =
     process.env.DISABLE_HMR === 'true' || Boolean(process.env.K_SERVICE);
+  const rawBase = process.env.VITE_BASE_PATH || '/';
+  const base = rawBase.endsWith('/') ? rawBase : `${rawBase}/`;
   return {
+    base,
     plugins: [
       react(),
       tailwindcss(),
@@ -22,7 +25,7 @@ export default defineConfig(() => {
           'sw-push.js',
         ],
         manifest: {
-          id: '/',
+          id: base,
           name: 'Moto Mandados',
           short_name: 'MotoMandados',
           description:
@@ -30,23 +33,23 @@ export default defineConfig(() => {
           theme_color: '#EA580C',
           background_color: '#F8FAFC',
           display: 'standalone',
-          start_url: '/',
-          scope: '/',
+          start_url: base,
+          scope: base,
           icons: [
             {
-              src: '/pwa-192x192.png',
+              src: 'pwa-192x192.png',
               sizes: '192x192',
               type: 'image/png',
               purpose: 'any',
             },
             {
-              src: '/pwa-512x512.png',
+              src: 'pwa-512x512.png',
               sizes: '512x512',
               type: 'image/png',
               purpose: 'any',
             },
             {
-              src: '/pwa-maskable-512x512.png',
+              src: 'pwa-maskable-512x512.png',
               sizes: '512x512',
               type: 'image/png',
               purpose: 'maskable',
@@ -55,7 +58,7 @@ export default defineConfig(() => {
         },
         workbox: {
           globPatterns: ['**/*.{js,css,html,ico,png,svg,woff,woff2}'],
-          importScripts: ['/sw-push.js'],
+          importScripts: [`${base}sw-push.js`],
           maximumFileSizeToCacheInBytes: 6 * 1024 * 1024,
           runtimeCaching: [
             {
