@@ -5,7 +5,8 @@ import { defineConfig } from 'vite';
 import { VitePWA } from 'vite-plugin-pwa';
 
 export default defineConfig(() => {
-  const disableHmr = process.env.DISABLE_HMR === 'true';
+  const disableHmr =
+    process.env.DISABLE_HMR === 'true' || Boolean(process.env.K_SERVICE);
   return {
     plugins: [
       react(),
