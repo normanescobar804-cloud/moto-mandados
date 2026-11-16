@@ -1,0 +1,17 @@
+node_modules/
+build/
+dist/
+dev-dist/
+coverage/
+.DS_Store
+*.log
+.env*
+!.env.example
+.vapid-keys.json
+.push-subscriptions.json
+.gmp_cache/
+.firebase/
+.aistudio/
+firebase-debug*.log
+apphosting-debug*.log
+

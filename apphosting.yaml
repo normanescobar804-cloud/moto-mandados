@@ -1,0 +1,22 @@
+# Firebase App Hosting configuration for Moto Mandados (Node.js + Express + Vite PWA)
+# Connect your GitHub repository in Firebase Console -> App Hosting -> Create backend
+runConfig:
+  cpu: 1
+  memoryMiB: 512
+  minInstances: 0
+  maxInstances: 4
+  concurrency: 80
+
+env:
+  - variable: NODE_ENV
+    value: production
+    availability:
+      - BUILD
+      - RUNTIME
+  # Optional server secrets (create them first with `firebase apphosting:secrets:set <NAME>`):
+  # - variable: GOOGLE_MAPS_API_KEY
+  #   secret: GOOGLE_MAPS_API_KEY
+  # - variable: VAPID_PUBLIC_KEY
+  #   secret: VAPID_PUBLIC_KEY
+  # - variable: VAPID_PRIVATE_KEY
+  #   secret: VAPID_PRIVATE_KEY

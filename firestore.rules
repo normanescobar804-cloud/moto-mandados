@@ -1,0 +1,1004 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Global default-deny safety net
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // --- Reusable Primitives ---
+    function isValidId(id) {
+      return id is string && id.size() >= 1 && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isVerified() {
+      return isSignedIn() && request.auth.token.email_verified == true;
+    }
+
+    function isOwner(uid) {
+      return isSignedIn() && request.auth.uid == uid;
+    }
+
+    function isAdmin() {
+      return isVerified() && (
+        request.auth.token.email == 'normanescobar804@gmail.com' ||
+        exists(/databases/$(database)/documents/admins/$(request.auth.uid))
+      );
+    }
+
+    function isNonNegNum(val) {
+      return (val is int || val is float) && val >= 0;
+    }
+
+    // --- Validation Blueprints ---
+    function isValidAdminRecord(data) {
+      return data.keys().hasAll(['uid', 'email', 'createdAt']) &&
+        data.keys().hasOnly(['uid', 'email', 'createdAt']) &&
+        isValidId(data.uid) &&
+        data.email is string && data.email.size() >= 3 && data.email.size() <= 200 &&
+        data.createdAt is timestamp;
+    }
+
+    function isValidRiderProfile(data) {
+      return data.keys().hasAll([
+          'uid', 'displayName', 'motoName', 'motoModel', 'motoPlate', 'motoColor',
+          'departmentId', 'departmentName', 'role', 'status', 'completedCount',
+          'onTimeRate', 'totalKm', 'rating', 'ratingCount', 'lat', 'lng',
+          'heading', 'speedKmh', 'createdAt', 'updatedAt'
+        ]) &&
+        data.keys().hasOnly([
+          'uid', 'displayName', 'photoUrl', 'motoName', 'motoModel', 'motoPlate', 'motoColor',
+          'departmentId', 'departmentName', 'role', 'status', 'verificationStatus',
+          'completedCount', 'onTimeRate', 'totalKm', 'rating', 'ratingCount', 'lat', 'lng',
+          'heading', 'speedKmh', 'locationUpdatedAt', 'createdAt', 'updatedAt'
+        ]) &&
+        isValidId(data.uid) &&
+        data.displayName is string && data.displayName.size() >= 2 && data.displayName.size() <= 80 &&
+        (!('photoUrl' in data) || (
+          data.photoUrl is string &&
+          data.photoUrl.size() <= 160000 &&
+          (
+            data.photoUrl == '' ||
+            data.photoUrl.matches('^https?://.*') ||
+            data.photoUrl.matches('^data:image/(jpeg|jpg|png|webp);base64,.*')
+          )
+        )) &&
+        data.motoName is string && data.motoName.size() >= 2 && data.motoName.size() <= 80 &&
+        data.motoModel is string && data.motoModel.size() >= 2 && data.motoModel.size() <= 80 &&
+        data.motoPlate is string && data.motoPlate.size() >= 2 && data.motoPlate.size() <= 24 &&
+        data.motoColor is string && data.motoColor.size() >= 3 && data.motoColor.size() <= 24 &&
+        data.departmentId is string && data.departmentId.size() >= 1 && data.departmentId.size() <= 64 &&
+        data.departmentName is string && data.departmentName.size() >= 1 && data.departmentName.size() <= 80 &&
+        data.role in ['rider', 'admin'] &&
+        data.status in ['available', 'on_route', 'offline'] &&
+        (!('verificationStatus' in data) || data.verificationStatus in ['unsubmitted', 'pending_review', 'approved', 'rejected']) &&
+        isNonNegNum(data.completedCount) &&
+        isNonNegNum(data.onTimeRate) && data.onTimeRate <= 100 &&
+        isNonNegNum(data.totalKm) &&
+        isNonNegNum(data.rating) && data.rating <= 5 &&
+        isNonNegNum(data.ratingCount) &&
+        (data.lat is int || data.lat is float) && data.lat >= -90 && data.lat <= 90 &&
+        (data.lng is int || data.lng is float) && data.lng >= -180 && data.lng <= 180 &&
+        isNonNegNum(data.heading) && data.heading <= 360 &&
+        isNonNegNum(data.speedKmh) && data.speedKmh <= 250 &&
+        data.createdAt is timestamp &&
+        data.updatedAt is timestamp &&
+        (!('locationUpdatedAt' in data) || data.locationUpdatedAt is timestamp);
+    }
+
+    function isAdultBirthDateMs(val) {
+      return val is int &&
+        val >= -2208988800000 &&
+        val <= request.time.toMillis() - 567993600000;
+    }
+
+    function isValidUserPrivateInfo(data) {
+      return data.keys().hasAll([
+          'uid', 'email', 'phone', 'notifUrgent', 'notifRouteRecalc',
+          'notifDailyEarnings', 'notifGpsProximity', 'notifSound', 'createdAt', 'updatedAt'
+        ]) &&
+        data.keys().hasOnly([
+          'uid', 'email', 'phone', 'birthDate', 'birthDateMs',
+          'notifUrgent', 'notifRouteRecalc', 'notifDailyEarnings',
+          'notifGpsProximity', 'notifSound', 'dailyEarningsTime',
+          'themePreference', 'createdAt', 'updatedAt'
+        ]) &&
+        isValidId(data.uid) &&
+        data.email is string && data.email.size() >= 3 && data.email.size() <= 200 &&
+        data.phone is string && data.phone.size() <= 32 &&
+        (!('birthDate' in data) || (
+          data.birthDate is string &&
+          data.birthDate.matches('^[0-9]{4}-[0-9]{2}-[0-9]{2}$')
+        )) &&
+        (!('birthDateMs' in data) || isAdultBirthDateMs(data.birthDateMs)) &&
+        data.notifUrgent is bool &&
+        data.notifRouteRecalc is bool &&
+        data.notifDailyEarnings is bool &&
+        data.notifGpsProximity is bool &&
+        data.notifSound is bool &&
+        (!('dailyEarningsTime' in data) || (
+          data.dailyEarningsTime is string &&
+          data.dailyEarningsTime.size() == 5 &&
+          data.dailyEarningsTime.matches('^([01][0-9]|2[0-3]):[0-5][0-9]$')
+        )) &&
+        (!('themePreference' in data) || data.themePreference in ['light', 'dark']) &&
+        data.createdAt is timestamp &&
+        data.updatedAt is timestamp;
+    }
+
+    function isValidDocPhotoValue(val) {
+      return val is string &&
+        val.size() <= 120000 &&
+        (val == '' || val.matches('^data:image/(jpeg|jpg|png|webp);base64,.*'));
+    }
+
+    function isValidDriverApplication(data) {
+      return data.keys().hasAll([
+          'uid', 'applicantName', 'motoName', 'motoPlate', 'departmentId',
+          'birthDate', 'birthDateMs', 'cedulaNumber', 'licenseNumber',
+          'phone', 'exactAddress', 'insuranceNumber', 'circulationNumber',
+          'status', 'reviewNote', 'submittedAt', 'updatedAt'
+        ]) &&
+        data.keys().hasOnly([
+          'uid', 'applicantName', 'motoName', 'motoPlate', 'departmentId',
+          'birthDate', 'birthDateMs', 'cedulaNumber', 'licenseNumber',
+          'phone', 'exactAddress', 'insuranceNumber', 'circulationNumber',
+          'cedulaPhotoUrl', 'licensePhotoUrl', 'insurancePhotoUrl', 'circulationPhotoUrl',
+          'motoPhotoUrl', 'status', 'reviewNote', 'submittedAt', 'reviewedAt', 'reviewedBy', 'updatedAt'
+        ]) &&
+        isValidId(data.uid) &&
+        data.applicantName is string && data.applicantName.size() >= 2 && data.applicantName.size() <= 80 &&
+        data.motoName is string && data.motoName.size() >= 2 && data.motoName.size() <= 80 &&
+        data.motoPlate is string && data.motoPlate.size() >= 2 && data.motoPlate.size() <= 24 &&
+        data.departmentId is string && data.departmentId.size() >= 1 && data.departmentId.size() <= 64 &&
+        data.birthDate is string && data.birthDate.matches('^[0-9]{4}-[0-9]{2}-[0-9]{2}$') &&
+        isAdultBirthDateMs(data.birthDateMs) &&
+        data.cedulaNumber is string && data.cedulaNumber.size() >= 5 && data.cedulaNumber.size() <= 40 &&
+        data.licenseNumber is string && data.licenseNumber.size() >= 5 && data.licenseNumber.size() <= 40 &&
+        data.phone is string && data.phone.size() >= 7 && data.phone.size() <= 32 &&
+        data.exactAddress is string && data.exactAddress.size() >= 10 && data.exactAddress.size() <= 240 &&
+        data.insuranceNumber is string && data.insuranceNumber.size() >= 4 && data.insuranceNumber.size() <= 60 &&
+        data.circulationNumber is string && data.circulationNumber.size() >= 4 && data.circulationNumber.size() <= 60 &&
+        (!('cedulaPhotoUrl' in data) || isValidDocPhotoValue(data.cedulaPhotoUrl)) &&
+        (!('licensePhotoUrl' in data) || isValidDocPhotoValue(data.licensePhotoUrl)) &&
+        (!('insurancePhotoUrl' in data) || isValidDocPhotoValue(data.insurancePhotoUrl)) &&
+        (!('circulationPhotoUrl' in data) || isValidDocPhotoValue(data.circulationPhotoUrl)) &&
+        (!('motoPhotoUrl' in data) || isValidDocPhotoValue(data.motoPhotoUrl)) &&
+        data.status in ['pending_review', 'approved', 'rejected'] &&
+        data.reviewNote is string && data.reviewNote.size() <= 300 &&
+        data.submittedAt is timestamp &&
+        data.updatedAt is timestamp &&
+        (!('reviewedAt' in data) || data.reviewedAt is timestamp) &&
+        (!('reviewedBy' in data) || (data.reviewedBy is string && data.reviewedBy.size() <= 128));
+    }
+
+    function isValidTariffSettings(data) {
+      return data.keys().hasAll([
+          'baseFare', 'perKmRate', 'urgentMultiplier', 'expressFixedSurcharge',
+          'platformFeePct', 'currency', 'updatedBy', 'updatedAt'
+        ]) &&
+        data.keys().hasOnly([
+          'baseFare', 'perKmRate', 'urgentMultiplier', 'expressFixedSurcharge',
+          'platformFeePct', 'currency', 'updatedBy', 'updatedAt'
+        ]) &&
+        isNonNegNum(data.baseFare) &&
+        isNonNegNum(data.perKmRate) &&
+        (data.urgentMultiplier is int || data.urgentMultiplier is float) && data.urgentMultiplier >= 1 && data.urgentMultiplier <= 5 &&
+        isNonNegNum(data.expressFixedSurcharge) &&
+        isNonNegNum(data.platformFeePct) && data.platformFeePct <= 50 &&
+        data.currency is string && data.currency.size() >= 3 && data.currency.size() <= 6 &&
+        isValidId(data.updatedBy) &&
+        data.updatedAt is timestamp;
+    }
+
+    function isValidDelivery(data) {
+      return data.keys().hasAll([
+          'createdByUid', 'assignedRiderUid', 'assignedRiderName', 'assignedMotoName',
+          'title', 'serviceCategory', 'serviceType', 'isUrgent', 'departmentId', 'departmentName',
+          'merchantName', 'cashOnDelivery', 'pickupAddress', 'pickupLat', 'pickupLng',
+          'dropoffAddress', 'dropoffLat', 'dropoffLng', 'customerName', 'notes',
+          'distanceKm', 'estimatedMinutes', 'stopOrder', 'baseFare', 'distanceFare',
+          'urgentSurcharge', 'totalFare', 'riderEarnings', 'platformFee', 'rated', 'status',
+          'createdAt', 'updatedAt'
+        ]) &&
+        data.keys().hasOnly([
+          'createdByUid', 'assignedRiderUid', 'assignedRiderName', 'assignedMotoName',
+          'title', 'serviceCategory', 'serviceType', 'isUrgent', 'departmentId', 'departmentName',
+          'merchantName', 'cashOnDelivery', 'pickupAddress', 'pickupLat', 'pickupLng',
+          'dropoffAddress', 'dropoffLat', 'dropoffLng', 'customerName', 'notes',
+          'distanceKm', 'estimatedMinutes', 'stopOrder', 'baseFare', 'distanceFare',
+          'urgentSurcharge', 'suggestedFare', 'customFareEdited', 'totalFare', 'riderEarnings',
+          'platformFee', 'usedFreeTrip', 'preferredRiderUid', 'preferredRiderName',
+          'passengerAccepted', 'declinedRiderUids', 'rated', 'status', 'createdAt', 'updatedAt', 'deliveredAt'
+        ]) &&
+        isValidId(data.createdByUid) &&
+        data.assignedRiderUid is string && data.assignedRiderUid.size() <= 128 &&
+        data.assignedRiderName is string && data.assignedRiderName.size() <= 80 &&
+        data.assignedMotoName is string && data.assignedMotoName.size() <= 80 &&
+        data.title is string && data.title.size() >= 2 && data.title.size() <= 120 &&
+        data.serviceCategory in ['delivery', 'comercio', 'super_expres', 'pasajero'] &&
+        data.serviceType in ['standard', 'express_15', 'priority_pkg', 'urgent_docs', 'medical', 'comercio_local', 'super_expres', 'pasajero_moto'] &&
+        data.isUrgent is bool &&
+        data.departmentId is string && data.departmentId.size() >= 1 && data.departmentId.size() <= 64 &&
+        data.departmentName is string && data.departmentName.size() >= 1 && data.departmentName.size() <= 80 &&
+        data.merchantName is string && data.merchantName.size() <= 100 &&
+        isNonNegNum(data.cashOnDelivery) &&
+        data.pickupAddress is string && data.pickupAddress.size() >= 3 && data.pickupAddress.size() <= 240 &&
+        (data.pickupLat is int || data.pickupLat is float) && data.pickupLat >= -90 && data.pickupLat <= 90 &&
+        (data.pickupLng is int || data.pickupLng is float) && data.pickupLng >= -180 && data.pickupLng <= 180 &&
+        data.dropoffAddress is string && data.dropoffAddress.size() >= 3 && data.dropoffAddress.size() <= 240 &&
+        (data.dropoffLat is int || data.dropoffLat is float) && data.dropoffLat >= -90 && data.dropoffLat <= 90 &&
+        (data.dropoffLng is int || data.dropoffLng is float) && data.dropoffLng >= -180 && data.dropoffLng <= 180 &&
+        data.customerName is string && data.customerName.size() >= 1 && data.customerName.size() <= 80 &&
+        data.notes is string && data.notes.size() <= 300 &&
+        isNonNegNum(data.distanceKm) &&
+        isNonNegNum(data.estimatedMinutes) &&
+        isNonNegNum(data.stopOrder) &&
+        isNonNegNum(data.baseFare) &&
+        isNonNegNum(data.distanceFare) &&
+        isNonNegNum(data.urgentSurcharge) &&
+        (!('suggestedFare' in data) || isNonNegNum(data.suggestedFare)) &&
+        (!('customFareEdited' in data) || data.customFareEdited is bool) &&
+        isNonNegNum(data.totalFare) &&
+        isNonNegNum(data.riderEarnings) &&
+        isNonNegNum(data.platformFee) &&
+        (!('usedFreeTrip' in data) || data.usedFreeTrip is bool) &&
+        (!('preferredRiderUid' in data) || (data.preferredRiderUid is string && data.preferredRiderUid.size() <= 128)) &&
+        (!('preferredRiderName' in data) || (data.preferredRiderName is string && data.preferredRiderName.size() <= 80)) &&
+        (!('passengerAccepted' in data) || data.passengerAccepted is bool) &&
+        (!('declinedRiderUids' in data) || (
+          data.declinedRiderUids is list &&
+          data.declinedRiderUids.size() <= 25 &&
+          (data.declinedRiderUids.size() == 0 || data.declinedRiderUids[0] is string)
+        )) &&
+        data.rated is bool &&
+        data.status in ['pending', 'assigned', 'en_route', 'picked_up', 'delivered', 'cancelled'] &&
+        data.createdAt is timestamp &&
+        data.updatedAt is timestamp &&
+        (!('deliveredAt' in data) || data.deliveredAt is timestamp);
+    }
+
+    function isValidTransaction(data) {
+      return data.keys().hasAll([
+          'deliveryId', 'riderUid', 'riderName', 'motoName', 'departmentId', 'serviceCategory',
+          'serviceType', 'isUrgent', 'distanceKm', 'baseFare', 'distanceFare', 'urgentSurcharge',
+          'grossAmount', 'platformFee', 'riderNetAmount', 'status', 'createdAt'
+        ]) &&
+        data.keys().hasOnly([
+          'deliveryId', 'riderUid', 'riderName', 'motoName', 'departmentId', 'serviceCategory',
+          'serviceType', 'isUrgent', 'distanceKm', 'baseFare', 'distanceFare', 'urgentSurcharge',
+          'grossAmount', 'platformFee', 'riderNetAmount', 'usedFreeTrip', 'feeRatePct', 'status', 'createdAt'
+        ]) &&
+        isValidId(data.deliveryId) &&
+        isValidId(data.riderUid) &&
+        data.riderName is string && data.riderName.size() >= 1 && data.riderName.size() <= 80 &&
+        data.motoName is string && data.motoName.size() >= 1 && data.motoName.size() <= 80 &&
+        data.departmentId is string && data.departmentId.size() >= 1 && data.departmentId.size() <= 64 &&
+        data.serviceCategory in ['delivery', 'comercio', 'super_expres', 'pasajero'] &&
+        data.serviceType in ['standard', 'express_15', 'priority_pkg', 'urgent_docs', 'medical', 'comercio_local', 'super_expres', 'pasajero_moto'] &&
+        data.isUrgent is bool &&
+        isNonNegNum(data.distanceKm) &&
+        isNonNegNum(data.baseFare) &&
+        isNonNegNum(data.distanceFare) &&
+        isNonNegNum(data.urgentSurcharge) &&
+        isNonNegNum(data.grossAmount) &&
+        isNonNegNum(data.platformFee) &&
+        isNonNegNum(data.riderNetAmount) &&
+        (!('usedFreeTrip' in data) || data.usedFreeTrip is bool) &&
+        (!('feeRatePct' in data) || (isNonNegNum(data.feeRatePct) && data.feeRatePct <= 50)) &&
+        data.status in ['completed', 'settled'] &&
+        data.createdAt is timestamp;
+    }
+
+    function isValidWallet(data) {
+      return data.keys().hasAll(['uid', 'balance', 'totalTopups', 'totalEarned', 'currency', 'updatedAt']) &&
+        data.keys().hasOnly([
+          'uid', 'balance', 'totalTopups', 'totalEarned', 'totalFeesDeducted',
+          'freeTripsBalance', 'freeTripsEarned', 'freeTripsUsed',
+          'xpPoints', 'currentRank', 'claimedRewardIds', 'currency', 'updatedAt'
+        ]) &&
+        isValidId(data.uid) &&
+        isNonNegNum(data.balance) &&
+        isNonNegNum(data.totalTopups) &&
+        isNonNegNum(data.totalEarned) &&
+        (!('totalFeesDeducted' in data) || isNonNegNum(data.totalFeesDeducted)) &&
+        (!('freeTripsBalance' in data) || (data.freeTripsBalance is int && data.freeTripsBalance >= 0 && data.freeTripsBalance <= 500)) &&
+        (!('freeTripsEarned' in data) || (data.freeTripsEarned is int && data.freeTripsEarned >= 0 && data.freeTripsEarned <= 500)) &&
+        (!('freeTripsUsed' in data) || (data.freeTripsUsed is int && data.freeTripsUsed >= 0 && data.freeTripsUsed <= 500)) &&
+        (!('xpPoints' in data) || isNonNegNum(data.xpPoints)) &&
+        (!('currentRank' in data) || data.currentRank in ['bronce', 'plata', 'oro', 'platino', 'diamante', 'maestro', 'gran_maestro']) &&
+        (!('claimedRewardIds' in data) || (
+          data.claimedRewardIds is list &&
+          data.claimedRewardIds.size() <= 50 &&
+          (data.claimedRewardIds.size() == 0 || data.claimedRewardIds[0] is string)
+        )) &&
+        data.currency is string && data.currency.size() >= 3 && data.currency.size() <= 6 &&
+        data.updatedAt is timestamp;
+    }
+
+    function isValidTopup(data) {
+      return data.keys().hasAll([
+          'uid', 'riderName', 'motoName', 'amount', 'referenceCode',
+          'qrPayload', 'status', 'createdAt', 'updatedAt'
+        ]) &&
+        data.keys().hasOnly([
+          'uid', 'riderName', 'motoName', 'amount', 'referenceCode',
+          'qrPayload', 'status', 'createdAt', 'updatedAt',
+          'method', 'bankName', 'accountHolder', 'accountLast4',
+          'transferReference', 'destinationBank'
+        ]) &&
+        isValidId(data.uid) &&
+        data.riderName is string && data.riderName.size() >= 1 && data.riderName.size() <= 80 &&
+        data.motoName is string && data.motoName.size() >= 1 && data.motoName.size() <= 80 &&
+        (data.amount is int || data.amount is float) && data.amount >= 10 && data.amount <= 50000 &&
+        data.referenceCode is string && data.referenceCode.size() >= 4 && data.referenceCode.size() <= 48 &&
+        data.qrPayload is string && data.qrPayload.size() >= 8 && data.qrPayload.size() <= 300 &&
+        data.status in ['pending', 'approved', 'rejected'] &&
+        (!('method' in data) || data.method in ['qr', 'bank_transfer']) &&
+        (!('bankName' in data) || (data.bankName is string && data.bankName.size() <= 60)) &&
+        (!('accountHolder' in data) || (data.accountHolder is string && data.accountHolder.size() <= 100)) &&
+        (!('accountLast4' in data) || (data.accountLast4 is string && data.accountLast4.size() <= 4)) &&
+        (!('transferReference' in data) || (data.transferReference is string && data.transferReference.size() <= 64)) &&
+        (!('destinationBank' in data) || (data.destinationBank is string && data.destinationBank.size() <= 100)) &&
+        data.createdAt is timestamp &&
+        data.updatedAt is timestamp;
+    }
+
+    function isValidBankAccount(data) {
+      return data.keys().hasAll([
+          'uid', 'alias', 'bankName', 'accountHolder', 'accountType',
+          'last4', 'clabeMasked', 'isDefault', 'createdAt', 'updatedAt'
+        ]) &&
+        data.keys().hasOnly([
+          'uid', 'alias', 'bankName', 'accountHolder', 'accountType',
+          'last4', 'clabeMasked', 'isDefault', 'createdAt', 'updatedAt'
+        ]) &&
+        isValidId(data.uid) &&
+        data.alias is string && data.alias.size() >= 2 && data.alias.size() <= 60 &&
+        data.bankName is string && data.bankName.size() >= 2 && data.bankName.size() <= 60 &&
+        data.accountHolder is string && data.accountHolder.size() >= 2 && data.accountHolder.size() <= 100 &&
+        data.accountType in ['ahorro', 'corriente', 'debito', 'cheques', 'clabe'] &&
+        data.last4 is string && data.last4.size() == 4 && data.last4.matches('^[0-9]{4}$') &&
+        data.clabeMasked is string && data.clabeMasked.size() >= 4 && data.clabeMasked.size() <= 32 &&
+        data.isDefault is bool &&
+        data.createdAt is timestamp &&
+        data.updatedAt is timestamp;
+    }
+
+    function isValidRating(data) {
+      return data.keys().hasAll([
+          'deliveryId', 'riderUid', 'riderName', 'motoName', 'authorUid',
+          'authorName', 'score', 'comment', 'departmentId', 'createdAt'
+        ]) &&
+        data.keys().hasOnly([
+          'deliveryId', 'riderUid', 'riderName', 'motoName', 'authorUid',
+          'authorName', 'score', 'comment', 'departmentId', 'createdAt'
+        ]) &&
+        isValidId(data.deliveryId) &&
+        isValidId(data.riderUid) &&
+        data.riderName is string && data.riderName.size() >= 1 && data.riderName.size() <= 80 &&
+        data.motoName is string && data.motoName.size() >= 1 && data.motoName.size() <= 80 &&
+        isValidId(data.authorUid) &&
+        data.authorName is string && data.authorName.size() >= 1 && data.authorName.size() <= 80 &&
+        (data.score is int || data.score is float) && data.score >= 1 && data.score <= 5 &&
+        data.comment is string && data.comment.size() <= 300 &&
+        data.departmentId is string && data.departmentId.size() >= 1 && data.departmentId.size() <= 64 &&
+        data.createdAt is timestamp;
+    }
+
+    function isValidNotification(data) {
+      return data.keys().hasAll(['recipientUid', 'title', 'body', 'category', 'read', 'createdAt']) &&
+        data.keys().hasOnly(['recipientUid', 'title', 'body', 'category', 'read', 'createdAt']) &&
+        isValidId(data.recipientUid) &&
+        data.title is string && data.title.size() >= 2 && data.title.size() <= 100 &&
+        data.body is string && data.body.size() >= 2 && data.body.size() <= 240 &&
+        data.category in ['urgent', 'route', 'wallet', 'rating', 'system'] &&
+        data.read is bool &&
+        data.createdAt is timestamp;
+    }
+
+    function isValidDepartment(data) {
+      return data.keys().hasAll([
+          'name', 'code', 'centerLat', 'centerLng', 'zoom',
+          'baseFareMultiplier', 'active', 'createdAt', 'updatedAt'
+        ]) &&
+        data.keys().hasOnly([
+          'name', 'code', 'centerLat', 'centerLng', 'zoom',
+          'baseFareMultiplier', 'active', 'createdAt', 'updatedAt'
+        ]) &&
+        data.name is string && data.name.size() >= 2 && data.name.size() <= 80 &&
+        data.code is string && data.code.size() >= 2 && data.code.size() <= 16 &&
+        (data.centerLat is int || data.centerLat is float) && data.centerLat >= -90 && data.centerLat <= 90 &&
+        (data.centerLng is int || data.centerLng is float) && data.centerLng >= -180 && data.centerLng <= 180 &&
+        (data.zoom is int || data.zoom is float) && data.zoom >= 5 && data.zoom <= 20 &&
+        (data.baseFareMultiplier is int || data.baseFareMultiplier is float) && data.baseFareMultiplier >= 0.5 && data.baseFareMultiplier <= 3 &&
+        data.active is bool &&
+        data.createdAt is timestamp &&
+        data.updatedAt is timestamp;
+    }
+
+    function isValidMerchant(data) {
+      return data.keys().hasAll([
+          'name', 'category', 'departmentId', 'departmentName',
+          'address', 'lat', 'lng', 'active', 'createdAt', 'updatedAt'
+        ]) &&
+        data.keys().hasOnly([
+          'name', 'category', 'departmentId', 'departmentName',
+          'address', 'lat', 'lng', 'active', 'createdAt', 'updatedAt'
+        ]) &&
+        data.name is string && data.name.size() >= 2 && data.name.size() <= 100 &&
+        data.category is string && data.category.size() >= 2 && data.category.size() <= 60 &&
+        data.departmentId is string && data.departmentId.size() >= 1 && data.departmentId.size() <= 64 &&
+        data.departmentName is string && data.departmentName.size() >= 1 && data.departmentName.size() <= 80 &&
+        data.address is string && data.address.size() >= 3 && data.address.size() <= 240 &&
+        (data.lat is int || data.lat is float) && data.lat >= -90 && data.lat <= 90 &&
+        (data.lng is int || data.lng is float) && data.lng >= -180 && data.lng <= 180 &&
+        data.active is bool &&
+        data.createdAt is timestamp &&
+        data.updatedAt is timestamp;
+    }
+
+    function isValidChatMessage(data) {
+      return data.keys().hasAll([
+          'deliveryId', 'deliveryOwnerUid', 'senderUid', 'senderName',
+          'senderRole', 'recipientUid', 'text', 'createdAt'
+        ]) &&
+        data.keys().hasOnly([
+          'deliveryId', 'deliveryOwnerUid', 'senderUid', 'senderName',
+          'senderRole', 'recipientUid', 'text', 'createdAt'
+        ]) &&
+        data.deliveryId is string && data.deliveryId.size() <= 128 &&
+        (data.deliveryId == '' || isValidId(data.deliveryId)) &&
+        isValidId(data.deliveryOwnerUid) &&
+        isValidId(data.senderUid) &&
+        data.senderName is string && data.senderName.size() >= 1 && data.senderName.size() <= 80 &&
+        data.senderRole in ['passenger', 'driver', 'admin'] &&
+        data.recipientUid is string && data.recipientUid.size() <= 128 &&
+        (data.recipientUid == '' || isValidId(data.recipientUid)) &&
+        data.text is string && data.text.size() >= 1 && data.text.size() <= 500 &&
+        data.createdAt is timestamp;
+    }
+
+    function isValidFrequentRoute(data) {
+      return data.keys().hasAll([
+          'riderUid', 'name', 'serviceCategory', 'serviceType', 'departmentId',
+          'departmentName', 'pickupAddress', 'pickupLat', 'pickupLng',
+          'dropoffAddress', 'dropoffLat', 'dropoffLng',
+          'defaultCustomerName', 'defaultNotes', 'usageCount', 'createdAt', 'updatedAt'
+        ]) &&
+        data.keys().hasOnly([
+          'riderUid', 'name', 'serviceCategory', 'serviceType', 'departmentId',
+          'departmentName', 'pickupAddress', 'pickupLat', 'pickupLng',
+          'dropoffAddress', 'dropoffLat', 'dropoffLng',
+          'defaultCustomerName', 'defaultNotes', 'usageCount', 'createdAt', 'updatedAt'
+        ]) &&
+        isValidId(data.riderUid) &&
+        data.name is string && data.name.size() >= 2 && data.name.size() <= 80 &&
+        data.serviceCategory in ['delivery', 'comercio', 'super_expres', 'pasajero'] &&
+        data.serviceType in ['standard', 'express_15', 'priority_pkg', 'urgent_docs', 'medical', 'comercio_local', 'super_expres', 'pasajero_moto'] &&
+        data.departmentId is string && data.departmentId.size() >= 1 && data.departmentId.size() <= 64 &&
+        data.departmentName is string && data.departmentName.size() >= 1 && data.departmentName.size() <= 80 &&
+        data.pickupAddress is string && data.pickupAddress.size() >= 3 && data.pickupAddress.size() <= 240 &&
+        (data.pickupLat is int || data.pickupLat is float) && data.pickupLat >= -90 && data.pickupLat <= 90 &&
+        (data.pickupLng is int || data.pickupLng is float) && data.pickupLng >= -180 && data.pickupLng <= 180 &&
+        data.dropoffAddress is string && data.dropoffAddress.size() >= 3 && data.dropoffAddress.size() <= 240 &&
+        (data.dropoffLat is int || data.dropoffLat is float) && data.dropoffLat >= -90 && data.dropoffLat <= 90 &&
+        (data.dropoffLng is int || data.dropoffLng is float) && data.dropoffLng >= -180 && data.dropoffLng <= 180 &&
+        data.defaultCustomerName is string && data.defaultCustomerName.size() <= 80 &&
+        data.defaultNotes is string && data.defaultNotes.size() <= 300 &&
+        isNonNegNum(data.usageCount) &&
+        data.createdAt is timestamp &&
+        data.updatedAt is timestamp;
+    }
+
+    // --- Collection Matchers ---
+    match /admins/{adminId} {
+      allow get: if isValidId(adminId) && (isOwner(adminId) || isAdmin());
+      allow list: if isAdmin();
+      allow create, update: if isAdmin() && isValidId(adminId) && isValidAdminRecord(incoming()) && incoming().createdAt == request.time;
+      allow delete: if isAdmin() && isValidId(adminId);
+    }
+
+    match /riders/{riderId} {
+      allow get: if isSignedIn() && isValidId(riderId);
+      allow list: if isSignedIn() && (
+        isAdmin() ||
+        resource.data.uid == request.auth.uid ||
+        resource.data.status == 'available' ||
+        resource.data.status == 'on_route'
+      );
+      allow create: if isVerified() &&
+        isValidId(riderId) &&
+        isValidRiderProfile(incoming()) &&
+        incoming().uid == request.auth.uid &&
+        (isOwner(riderId) || isAdmin()) &&
+        (incoming().role == 'rider' || isAdmin()) &&
+        (!('verificationStatus' in incoming()) || incoming().verificationStatus in ['unsubmitted', 'pending_review'] || isAdmin()) &&
+        incoming().createdAt == request.time &&
+        incoming().updatedAt == request.time;
+      allow update: if isVerified() &&
+        isValidId(riderId) &&
+        isValidRiderProfile(incoming()) &&
+        incoming().uid == existing().uid &&
+        incoming().createdAt == existing().createdAt &&
+        incoming().updatedAt == request.time &&
+        (
+          isAdmin() ||
+          (
+            isOwner(riderId) &&
+            incoming().role == existing().role &&
+            (
+              !('verificationStatus' in incoming()) ||
+              incoming().verificationStatus == 'pending_review' ||
+              incoming().verificationStatus == existing().get('verificationStatus', 'unsubmitted')
+            ) &&
+            incoming().diff(existing()).affectedKeys().hasOnly([
+              'displayName', 'photoUrl', 'motoName', 'motoModel', 'motoPlate', 'motoColor',
+              'departmentId', 'departmentName', 'status', 'verificationStatus', 'completedCount',
+              'onTimeRate', 'totalKm', 'lat', 'lng', 'heading', 'speedKmh',
+              'locationUpdatedAt', 'updatedAt'
+            ])
+          )
+        );
+      allow delete: if isAdmin() && isValidId(riderId);
+    }
+
+    match /users/{userId} {
+      allow get: if isValidId(userId) && (isOwner(userId) || isAdmin());
+      allow list: if isAdmin();
+      allow create: if isVerified() &&
+        isValidId(userId) &&
+        isOwner(userId) &&
+        isValidUserPrivateInfo(incoming()) &&
+        incoming().uid == request.auth.uid &&
+        incoming().createdAt == request.time &&
+        incoming().updatedAt == request.time;
+      allow update: if isVerified() &&
+        isValidId(userId) &&
+        (isOwner(userId) || isAdmin()) &&
+        isValidUserPrivateInfo(incoming()) &&
+        incoming().uid == existing().uid &&
+        incoming().email == existing().email &&
+        incoming().createdAt == existing().createdAt &&
+        incoming().updatedAt == request.time &&
+        incoming().diff(existing()).affectedKeys().hasOnly([
+          'phone', 'birthDate', 'birthDateMs', 'notifUrgent', 'notifRouteRecalc',
+          'notifDailyEarnings', 'notifGpsProximity', 'notifSound', 'dailyEarningsTime',
+          'themePreference', 'updatedAt'
+        ]);
+      allow delete: if isAdmin() && isValidId(userId);
+    }
+
+    match /driverApplications/{userId} {
+      allow get: if isSignedIn() && isValidId(userId) && (isOwner(userId) || isAdmin());
+      allow list: if isSignedIn() && (isAdmin() || resource.data.uid == request.auth.uid);
+      allow create: if isVerified() &&
+        isValidId(userId) &&
+        isOwner(userId) &&
+        isValidDriverApplication(incoming()) &&
+        incoming().uid == request.auth.uid &&
+        ('motoPhotoUrl' in incoming()) &&
+        incoming().motoPhotoUrl.size() >= 30 &&
+        incoming().status == 'pending_review' &&
+        incoming().reviewNote == '' &&
+        !('reviewedAt' in incoming()) &&
+        !('reviewedBy' in incoming()) &&
+        incoming().submittedAt == request.time &&
+        incoming().updatedAt == request.time;
+      allow update: if isVerified() &&
+        isValidId(userId) &&
+        isValidDriverApplication(incoming()) &&
+        incoming().uid == existing().uid &&
+        incoming().updatedAt == request.time &&
+        (
+          isAdmin() ||
+          (
+            isOwner(userId) &&
+            existing().status != 'approved' &&
+            ('motoPhotoUrl' in incoming()) &&
+            incoming().motoPhotoUrl.size() >= 30 &&
+            incoming().status == 'pending_review' &&
+            incoming().reviewNote == '' &&
+            !('reviewedAt' in incoming()) &&
+            !('reviewedBy' in incoming()) &&
+            incoming().submittedAt == request.time
+          )
+        );
+      allow delete: if isAdmin() && isValidId(userId);
+    }
+
+    match /settings/{settingId} {
+      allow get: if isSignedIn() && isValidId(settingId);
+      allow list: if isSignedIn() && resource.data.currency is string;
+      allow create, update: if isAdmin() &&
+        isValidId(settingId) &&
+        isValidTariffSettings(incoming()) &&
+        incoming().updatedBy == request.auth.uid &&
+        incoming().updatedAt == request.time;
+      allow delete: if false;
+    }
+
+    match /deliveries/{deliveryId} {
+      allow get: if isSignedIn() && isValidId(deliveryId) && (
+        isAdmin() ||
+        existing().createdByUid == request.auth.uid ||
+        existing().assignedRiderUid == request.auth.uid ||
+        existing().status == 'pending'
+      );
+      allow list: if isSignedIn() && (
+        isAdmin() ||
+        resource.data.createdByUid == request.auth.uid ||
+        resource.data.assignedRiderUid == request.auth.uid ||
+        resource.data.status == 'pending'
+      );
+      allow create: if isVerified() &&
+        isValidId(deliveryId) &&
+        isValidDelivery(incoming()) &&
+        incoming().createdByUid == request.auth.uid &&
+        incoming().status in ['pending', 'assigned'] &&
+        incoming().rated == false &&
+        incoming().createdAt == request.time &&
+        incoming().updatedAt == request.time &&
+        (incoming().assignedRiderUid == '' || isAdmin() || incoming().assignedRiderUid == request.auth.uid);
+      allow update: if isVerified() &&
+        isValidId(deliveryId) &&
+        isValidDelivery(incoming()) &&
+        incoming().createdByUid == existing().createdByUid &&
+        incoming().createdAt == existing().createdAt &&
+        incoming().updatedAt == request.time &&
+        (
+          isAdmin() ||
+          (
+            existing().status == 'delivered' &&
+            existing().rated == false &&
+            incoming().rated == true &&
+            incoming().status == 'delivered' &&
+            incoming().diff(existing()).affectedKeys().hasOnly(['rated', 'updatedAt'])
+          ) ||
+          (
+            existing().status != 'delivered' &&
+            existing().status != 'cancelled' &&
+            (
+              (
+                existing().status == 'pending' &&
+                incoming().status == 'assigned' &&
+                incoming().assignedRiderUid == request.auth.uid &&
+                get(/databases/$(database)/documents/riders/$(request.auth.uid)).data.get('verificationStatus', 'unsubmitted') == 'approved' &&
+                incoming().diff(existing()).affectedKeys().hasOnly([
+                  'assignedRiderUid', 'assignedRiderName', 'assignedMotoName', 'status', 'stopOrder', 'passengerAccepted', 'updatedAt'
+                ])
+              ) ||
+              (
+                existing().assignedRiderUid == request.auth.uid &&
+                existing().status == 'assigned' &&
+                incoming().status == 'pending' &&
+                incoming().assignedRiderUid == '' &&
+                incoming().assignedRiderName == '' &&
+                incoming().assignedMotoName == '' &&
+                incoming().diff(existing()).affectedKeys().hasOnly([
+                  'assignedRiderUid', 'assignedRiderName', 'assignedMotoName', 'status', 'passengerAccepted', 'updatedAt'
+                ])
+              ) ||
+              (
+                existing().assignedRiderUid == request.auth.uid &&
+                incoming().assignedRiderUid == existing().assignedRiderUid &&
+                (
+                  incoming().diff(existing()).affectedKeys().hasOnly([
+                    'status', 'stopOrder', 'updatedAt', 'deliveredAt'
+                  ]) ||
+                  (
+                    incoming().status == 'delivered' &&
+                    incoming().totalFare == existing().totalFare &&
+                    isNonNegNum(incoming().platformFee) &&
+                    isNonNegNum(incoming().riderEarnings) &&
+                    incoming().platformFee <= existing().totalFare &&
+                    incoming().riderEarnings <= existing().totalFare &&
+                    incoming().diff(existing()).affectedKeys().hasOnly([
+                      'status', 'stopOrder', 'updatedAt', 'deliveredAt', 'usedFreeTrip', 'platformFee', 'riderEarnings'
+                    ])
+                  )
+                )
+              ) ||
+              (
+                existing().createdByUid == request.auth.uid &&
+                existing().status == 'assigned' &&
+                incoming().status == 'assigned' &&
+                incoming().assignedRiderUid == existing().assignedRiderUid &&
+                incoming().passengerAccepted == true &&
+                incoming().diff(existing()).affectedKeys().hasOnly(['passengerAccepted', 'updatedAt'])
+              ) ||
+              (
+                existing().createdByUid == request.auth.uid &&
+                existing().status in ['assigned', 'en_route'] &&
+                incoming().status == 'pending' &&
+                incoming().assignedRiderUid == '' &&
+                incoming().assignedRiderName == '' &&
+                incoming().assignedMotoName == '' &&
+                incoming().passengerAccepted == false &&
+                incoming().diff(existing()).affectedKeys().hasOnly([
+                  'assignedRiderUid', 'assignedRiderName', 'assignedMotoName', 'status', 'passengerAccepted', 'declinedRiderUids', 'updatedAt'
+                ])
+              ) ||
+              (
+                existing().createdByUid == request.auth.uid &&
+                existing().status == 'pending' &&
+                incoming().status == 'cancelled' &&
+                incoming().diff(existing()).affectedKeys().hasOnly(['status', 'updatedAt'])
+              ) ||
+              (
+                (existing().createdByUid == request.auth.uid || existing().assignedRiderUid == request.auth.uid) &&
+                (incoming().totalFare is int || incoming().totalFare is float) &&
+                incoming().totalFare >= 10 &&
+                incoming().totalFare <= 50000 &&
+                incoming().status == existing().status &&
+                incoming().assignedRiderUid == existing().assignedRiderUid &&
+                incoming().diff(existing()).affectedKeys().hasOnly([
+                  'totalFare', 'riderEarnings', 'platformFee', 'customFareEdited', 'suggestedFare', 'updatedAt'
+                ])
+              )
+            )
+          )
+        );
+      allow delete: if isAdmin() && isValidId(deliveryId);
+    }
+
+    match /transactions/{transactionId} {
+      allow get: if isSignedIn() && isValidId(transactionId) && (
+        isAdmin() ||
+        existing().riderUid == request.auth.uid
+      );
+      allow list: if isSignedIn() && (
+        isAdmin() ||
+        resource.data.riderUid == request.auth.uid
+      );
+      allow create: if isVerified() &&
+        isValidId(transactionId) &&
+        isValidTransaction(incoming()) &&
+        exists(/databases/$(database)/documents/deliveries/$(incoming().deliveryId)) &&
+        incoming().createdAt == request.time &&
+        (isAdmin() || incoming().riderUid == request.auth.uid);
+      allow update, delete: if isAdmin() && isValidId(transactionId);
+    }
+
+    match /wallets/{walletId} {
+      allow get: if isSignedIn() && isValidId(walletId) && (isOwner(walletId) || isAdmin());
+      allow list: if isSignedIn() && (isAdmin() || resource.data.uid == request.auth.uid);
+      allow create: if isVerified() &&
+        isValidId(walletId) &&
+        isValidWallet(incoming()) &&
+        incoming().updatedAt == request.time &&
+        (
+          isAdmin() ||
+          (
+            isOwner(walletId) &&
+            incoming().uid == request.auth.uid &&
+            incoming().balance == 0 &&
+            incoming().totalTopups == 0 &&
+            incoming().totalEarned == 0 &&
+            incoming().get('totalFeesDeducted', 0) == 0 &&
+            incoming().get('freeTripsBalance', 0) == 0 &&
+            incoming().get('freeTripsEarned', 0) == 0 &&
+            incoming().get('freeTripsUsed', 0) == 0
+          )
+        );
+      allow update: if isVerified() &&
+        isValidId(walletId) &&
+        isValidWallet(incoming()) &&
+        incoming().uid == existing().uid &&
+        incoming().updatedAt == request.time &&
+        (
+          isAdmin() ||
+          (
+            isOwner(walletId) &&
+            incoming().totalTopups == existing().totalTopups &&
+            incoming().totalEarned >= existing().totalEarned &&
+            incoming().balance <= existing().balance + (incoming().totalEarned - existing().totalEarned) &&
+            incoming().get('totalFeesDeducted', 0) >= existing().get('totalFeesDeducted', 0) &&
+            incoming().get('freeTripsEarned', 0) >= existing().get('freeTripsEarned', 0) &&
+            incoming().get('freeTripsEarned', 0) <= existing().get('freeTripsEarned', 0) + 25 &&
+            incoming().get('freeTripsUsed', 0) >= existing().get('freeTripsUsed', 0) &&
+            incoming().get('freeTripsUsed', 0) <= existing().get('freeTripsUsed', 0) + 1 &&
+            incoming().get('xpPoints', 0) >= existing().get('xpPoints', 0) &&
+            incoming().diff(existing()).affectedKeys().hasOnly([
+              'balance', 'totalEarned', 'totalFeesDeducted',
+              'freeTripsBalance', 'freeTripsEarned', 'freeTripsUsed',
+              'xpPoints', 'currentRank', 'claimedRewardIds', 'updatedAt'
+            ])
+          )
+        );
+      allow delete: if isAdmin() && isValidId(walletId);
+    }
+
+    match /topups/{topupId} {
+      allow get: if isSignedIn() && isValidId(topupId) && (isAdmin() || existing().uid == request.auth.uid);
+      allow list: if isSignedIn() && (isAdmin() || resource.data.uid == request.auth.uid);
+      allow create: if isVerified() &&
+        isValidId(topupId) &&
+        isValidTopup(incoming()) &&
+        incoming().uid == request.auth.uid &&
+        incoming().status == 'pending' &&
+        incoming().createdAt == request.time &&
+        incoming().updatedAt == request.time;
+      allow update: if isVerified() &&
+        isValidId(topupId) &&
+        isValidTopup(incoming()) &&
+        incoming().uid == existing().uid &&
+        incoming().createdAt == existing().createdAt &&
+        incoming().updatedAt == request.time &&
+        isAdmin();
+      allow delete: if isAdmin() && isValidId(topupId);
+    }
+
+    match /bankAccounts/{accountId} {
+      allow get: if isSignedIn() && isValidId(accountId) && (isAdmin() || existing().uid == request.auth.uid);
+      allow list: if isSignedIn() && (isAdmin() || resource.data.uid == request.auth.uid);
+      allow create: if isVerified() &&
+        isValidId(accountId) &&
+        isValidBankAccount(incoming()) &&
+        incoming().uid == request.auth.uid &&
+        incoming().createdAt == request.time &&
+        incoming().updatedAt == request.time;
+      allow update: if isVerified() &&
+        isValidId(accountId) &&
+        isValidBankAccount(incoming()) &&
+        (isAdmin() || isOwner(existing().uid)) &&
+        incoming().uid == existing().uid &&
+        incoming().createdAt == existing().createdAt &&
+        incoming().updatedAt == request.time &&
+        incoming().diff(existing()).affectedKeys().hasOnly(['alias', 'isDefault', 'updatedAt']);
+      allow delete: if isVerified() && isValidId(accountId) && (isAdmin() || isOwner(existing().uid));
+    }
+
+    match /ratings/{ratingId} {
+      allow get: if isSignedIn() && isValidId(ratingId) && (
+        isAdmin() ||
+        existing().riderUid == request.auth.uid ||
+        existing().authorUid == request.auth.uid
+      );
+      allow list: if isSignedIn() && (
+        isAdmin() ||
+        resource.data.riderUid == request.auth.uid ||
+        resource.data.authorUid == request.auth.uid
+      );
+      allow create: if isVerified() &&
+        isValidId(ratingId) &&
+        isValidRating(incoming()) &&
+        incoming().authorUid == request.auth.uid &&
+        exists(/databases/$(database)/documents/deliveries/$(incoming().deliveryId)) &&
+        incoming().createdAt == request.time;
+      allow update, delete: if isAdmin() && isValidId(ratingId);
+    }
+
+    match /notifications/{notificationId} {
+      allow get: if isSignedIn() && isValidId(notificationId) && (isAdmin() || existing().recipientUid == request.auth.uid);
+      allow list: if isSignedIn() && (isAdmin() || resource.data.recipientUid == request.auth.uid);
+      allow create: if isVerified() &&
+        isValidId(notificationId) &&
+        isValidNotification(incoming()) &&
+        incoming().createdAt == request.time &&
+        (isAdmin() || incoming().recipientUid == request.auth.uid);
+      allow update: if isVerified() &&
+        isValidId(notificationId) &&
+        isValidNotification(incoming()) &&
+        incoming().recipientUid == existing().recipientUid &&
+        incoming().createdAt == existing().createdAt &&
+        (
+          isAdmin() ||
+          (
+            existing().recipientUid == request.auth.uid &&
+            incoming().diff(existing()).affectedKeys().hasOnly(['read'])
+          )
+        );
+      allow delete: if isVerified() && isValidId(notificationId) && (isAdmin() || existing().recipientUid == request.auth.uid);
+    }
+
+    match /departments/{deptId} {
+      allow get: if isSignedIn() && isValidId(deptId);
+      allow list: if isSignedIn() && (
+        isAdmin() ||
+        resource.data.active == true
+      );
+      allow create, update: if isAdmin() &&
+        isValidId(deptId) &&
+        isValidDepartment(incoming()) &&
+        incoming().updatedAt == request.time;
+      allow delete: if isAdmin() && isValidId(deptId);
+    }
+
+    match /merchants/{merchantId} {
+      allow get: if isSignedIn() && isValidId(merchantId);
+      allow list: if isSignedIn() && (
+        isAdmin() ||
+        resource.data.active == true
+      );
+      allow create, update: if isAdmin() &&
+        isValidId(merchantId) &&
+        isValidMerchant(incoming()) &&
+        incoming().updatedAt == request.time;
+      allow delete: if isAdmin() && isValidId(merchantId);
+    }
+
+    match /messages/{messageId} {
+      allow get: if isSignedIn() && isValidId(messageId) && (
+        isAdmin() ||
+        existing().senderUid == request.auth.uid ||
+        existing().recipientUid == request.auth.uid ||
+        existing().deliveryOwnerUid == request.auth.uid
+      );
+      allow list: if isSignedIn() && (
+        isAdmin() ||
+        resource.data.senderUid == request.auth.uid ||
+        resource.data.recipientUid == request.auth.uid ||
+        resource.data.deliveryOwnerUid == request.auth.uid
+      );
+      allow create: if isVerified() &&
+        isValidId(messageId) &&
+        isValidChatMessage(incoming()) &&
+        incoming().senderUid == request.auth.uid &&
+        incoming().createdAt == request.time &&
+        (
+          (
+            incoming().deliveryId != '' &&
+            exists(/databases/$(database)/documents/deliveries/$(incoming().deliveryId)) &&
+            incoming().deliveryOwnerUid == get(/databases/$(database)/documents/deliveries/$(incoming().deliveryId)).data.createdByUid
+          ) ||
+          (
+            incoming().deliveryId == '' &&
+            incoming().deliveryOwnerUid == request.auth.uid &&
+            incoming().recipientUid != '' &&
+            exists(/databases/$(database)/documents/riders/$(incoming().recipientUid))
+          )
+        );
+      allow update, delete: if isAdmin() && isValidId(messageId);
+    }
+
+    match /frequentRoutes/{routeId} {
+      allow get: if isSignedIn() && isValidId(routeId) && (
+        isAdmin() ||
+        existing().riderUid == request.auth.uid
+      );
+      allow list: if isSignedIn() && (
+        isAdmin() ||
+        resource.data.riderUid == request.auth.uid
+      );
+      allow create: if isVerified() &&
+        isValidId(routeId) &&
+        isValidFrequentRoute(incoming()) &&
+        incoming().riderUid == request.auth.uid &&
+        incoming().usageCount == 0 &&
+        incoming().createdAt == request.time &&
+        incoming().updatedAt == request.time;
+      allow update: if isVerified() &&
+        isValidId(routeId) &&
+        isValidFrequentRoute(incoming()) &&
+        (isAdmin() || isOwner(existing().riderUid)) &&
+        incoming().riderUid == existing().riderUid &&
+        incoming().createdAt == existing().createdAt &&
+        incoming().updatedAt == request.time &&
+        incoming().diff(existing()).affectedKeys().hasOnly([
+          'name', 'serviceCategory', 'serviceType', 'departmentId', 'departmentName',
+          'pickupAddress', 'pickupLat', 'pickupLng',
+          'dropoffAddress', 'dropoffLat', 'dropoffLng',
+          'defaultCustomerName', 'defaultNotes', 'usageCount', 'updatedAt'
+        ]);
+      allow delete: if isVerified() && isValidId(routeId) && (
+        isAdmin() ||
+        isOwner(existing().riderUid)
+      );
+    }
+  }
+}

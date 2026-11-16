@@ -1,0 +1,429 @@
+{
+  "entities": {
+    "AdminRecord": {
+      "title": "AdminRecord",
+      "description": "Trusted administrator registry document.",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "email": { "type": "string", "maxLength": 200 },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["uid", "email", "createdAt"]
+    },
+    "RiderProfile": {
+      "title": "RiderProfile",
+      "description": "Operational motorcycle rider profile without PII.",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "displayName": { "type": "string", "minLength": 2, "maxLength": 80 },
+        "photoUrl": { "type": "string", "maxLength": 160000 },
+        "motoName": { "type": "string", "minLength": 2, "maxLength": 80 },
+        "motoModel": { "type": "string", "minLength": 2, "maxLength": 80 },
+        "motoPlate": { "type": "string", "minLength": 2, "maxLength": 24 },
+        "motoColor": { "type": "string", "minLength": 3, "maxLength": 24 },
+        "departmentId": { "type": "string", "minLength": 1, "maxLength": 64 },
+        "departmentName": { "type": "string", "minLength": 1, "maxLength": 80 },
+        "role": { "type": "string", "enum": ["rider", "admin"] },
+        "status": { "type": "string", "enum": ["available", "on_route", "offline"] },
+        "verificationStatus": { "type": "string", "enum": ["unsubmitted", "pending_review", "approved", "rejected"] },
+        "completedCount": { "type": "number" },
+        "onTimeRate": { "type": "number" },
+        "totalKm": { "type": "number" },
+        "rating": { "type": "number" },
+        "ratingCount": { "type": "number" },
+        "lat": { "type": "number" },
+        "lng": { "type": "number" },
+        "heading": { "type": "number" },
+        "speedKmh": { "type": "number" },
+        "locationUpdatedAt": { "type": "string", "format": "date-time" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["uid", "displayName", "motoName", "motoModel", "motoPlate", "motoColor", "departmentId", "departmentName", "role", "status", "completedCount", "onTimeRate", "totalKm", "rating", "ratingCount", "lat", "lng", "heading", "speedKmh", "createdAt", "updatedAt"]
+    },
+    "UserPrivateInfo": {
+      "title": "UserPrivateInfo",
+      "description": "PII and personal notification preferences strictly isolated per user.",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "email": { "type": "string", "minLength": 3, "maxLength": 200 },
+        "phone": { "type": "string", "maxLength": 32 },
+        "birthDate": { "type": "string", "minLength": 10, "maxLength": 10, "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}$" },
+        "birthDateMs": { "type": "number" },
+        "notifUrgent": { "type": "boolean" },
+        "notifRouteRecalc": { "type": "boolean" },
+        "notifDailyEarnings": { "type": "boolean" },
+        "notifGpsProximity": { "type": "boolean" },
+        "notifSound": { "type": "boolean" },
+        "dailyEarningsTime": { "type": "string", "minLength": 5, "maxLength": 5, "pattern": "^([01][0-9]|2[0-3]):[0-5][0-9]$" },
+        "themePreference": { "type": "string", "enum": ["light", "dark"] },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["uid", "email", "phone", "notifUrgent", "notifRouteRecalc", "notifDailyEarnings", "notifGpsProximity", "notifSound", "createdAt", "updatedAt"]
+    },
+    "DriverApplication": {
+      "title": "DriverApplication",
+      "description": "PII-isolated driver verification documents, 18+ age proof, and 12-hour approval workflow record.",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "applicantName": { "type": "string", "minLength": 2, "maxLength": 80 },
+        "motoName": { "type": "string", "minLength": 2, "maxLength": 80 },
+        "motoPlate": { "type": "string", "minLength": 2, "maxLength": 24 },
+        "departmentId": { "type": "string", "minLength": 1, "maxLength": 64 },
+        "birthDate": { "type": "string", "minLength": 10, "maxLength": 10, "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}$" },
+        "birthDateMs": { "type": "number" },
+        "cedulaNumber": { "type": "string", "minLength": 5, "maxLength": 40 },
+        "licenseNumber": { "type": "string", "minLength": 5, "maxLength": 40 },
+        "phone": { "type": "string", "minLength": 7, "maxLength": 32 },
+        "exactAddress": { "type": "string", "minLength": 10, "maxLength": 240 },
+        "insuranceNumber": { "type": "string", "minLength": 4, "maxLength": 60 },
+        "circulationNumber": { "type": "string", "minLength": 4, "maxLength": 60 },
+        "cedulaPhotoUrl": { "type": "string", "maxLength": 120000 },
+        "licensePhotoUrl": { "type": "string", "maxLength": 120000 },
+        "insurancePhotoUrl": { "type": "string", "maxLength": 120000 },
+        "circulationPhotoUrl": { "type": "string", "maxLength": 120000 },
+        "motoPhotoUrl": { "type": "string", "maxLength": 120000 },
+        "status": { "type": "string", "enum": ["pending_review", "approved", "rejected"] },
+        "reviewNote": { "type": "string", "maxLength": 300 },
+        "submittedAt": { "type": "string", "format": "date-time" },
+        "reviewedAt": { "type": "string", "format": "date-time" },
+        "reviewedBy": { "type": "string", "maxLength": 128 },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["uid", "applicantName", "motoName", "motoPlate", "departmentId", "birthDate", "birthDateMs", "cedulaNumber", "licenseNumber", "phone", "exactAddress", "insuranceNumber", "circulationNumber", "motoPhotoUrl", "status", "reviewNote", "submittedAt", "updatedAt"]
+    },
+    "TariffSettings": {
+      "title": "TariffSettings",
+      "description": "Transparent base tariff configuration managed by administrators.",
+      "type": "object",
+      "properties": {
+        "baseFare": { "type": "number" },
+        "perKmRate": { "type": "number" },
+        "urgentMultiplier": { "type": "number" },
+        "expressFixedSurcharge": { "type": "number" },
+        "platformFeePct": { "type": "number" },
+        "currency": { "type": "string", "minLength": 3, "maxLength": 6 },
+        "updatedBy": { "type": "string", "minLength": 1, "maxLength": 128 },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["baseFare", "perKmRate", "urgentMultiplier", "expressFixedSurcharge", "platformFeePct", "currency", "updatedBy", "updatedAt"]
+    },
+    "Delivery": {
+      "title": "Delivery",
+      "description": "Delivery order across Delivery, Comercio, and Súper Exprés verticals.",
+      "type": "object",
+      "properties": {
+        "createdByUid": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "assignedRiderUid": { "type": "string", "maxLength": 128 },
+        "assignedRiderName": { "type": "string", "maxLength": 80 },
+        "assignedMotoName": { "type": "string", "maxLength": 80 },
+        "title": { "type": "string", "minLength": 2, "maxLength": 120 },
+        "serviceCategory": { "type": "string", "enum": ["delivery", "comercio", "super_expres", "pasajero"] },
+        "serviceType": { "type": "string", "enum": ["standard", "express_15", "priority_pkg", "urgent_docs", "medical", "comercio_local", "super_expres", "pasajero_moto"] },
+        "isUrgent": { "type": "boolean" },
+        "departmentId": { "type": "string", "minLength": 1, "maxLength": 64 },
+        "departmentName": { "type": "string", "minLength": 1, "maxLength": 80 },
+        "merchantName": { "type": "string", "maxLength": 100 },
+        "cashOnDelivery": { "type": "number" },
+        "pickupAddress": { "type": "string", "minLength": 3, "maxLength": 240 },
+        "pickupLat": { "type": "number" },
+        "pickupLng": { "type": "number" },
+        "dropoffAddress": { "type": "string", "minLength": 3, "maxLength": 240 },
+        "dropoffLat": { "type": "number" },
+        "dropoffLng": { "type": "number" },
+        "customerName": { "type": "string", "minLength": 1, "maxLength": 80 },
+        "notes": { "type": "string", "maxLength": 300 },
+        "distanceKm": { "type": "number" },
+        "estimatedMinutes": { "type": "number" },
+        "stopOrder": { "type": "number" },
+        "baseFare": { "type": "number" },
+        "distanceFare": { "type": "number" },
+        "urgentSurcharge": { "type": "number" },
+        "suggestedFare": { "type": "number" },
+        "customFareEdited": { "type": "boolean" },
+        "totalFare": { "type": "number" },
+        "riderEarnings": { "type": "number" },
+        "platformFee": { "type": "number" },
+        "usedFreeTrip": { "type": "boolean" },
+        "preferredRiderUid": { "type": "string", "maxLength": 128 },
+        "preferredRiderName": { "type": "string", "maxLength": 80 },
+        "passengerAccepted": { "type": "boolean" },
+        "declinedRiderUids": { "type": "array", "maxItems": 25, "items": { "type": "string" } },
+        "rated": { "type": "boolean" },
+        "status": { "type": "string", "enum": ["pending", "assigned", "en_route", "picked_up", "delivered", "cancelled"] },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" },
+        "deliveredAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["createdByUid", "assignedRiderUid", "assignedRiderName", "assignedMotoName", "title", "serviceCategory", "serviceType", "isUrgent", "departmentId", "departmentName", "merchantName", "cashOnDelivery", "pickupAddress", "pickupLat", "pickupLng", "dropoffAddress", "dropoffLat", "dropoffLng", "customerName", "notes", "distanceKm", "estimatedMinutes", "stopOrder", "baseFare", "distanceFare", "urgentSurcharge", "totalFare", "riderEarnings", "platformFee", "rated", "status", "createdAt", "updatedAt"]
+    },
+    "Transaction": {
+      "title": "Transaction",
+      "description": "Immutable financial earnings ledger entry for a completed delivery.",
+      "type": "object",
+      "properties": {
+        "deliveryId": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "riderUid": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "riderName": { "type": "string", "minLength": 1, "maxLength": 80 },
+        "motoName": { "type": "string", "minLength": 1, "maxLength": 80 },
+        "departmentId": { "type": "string", "minLength": 1, "maxLength": 64 },
+        "serviceCategory": { "type": "string", "enum": ["delivery", "comercio", "super_expres", "pasajero"] },
+        "serviceType": { "type": "string", "enum": ["standard", "express_15", "priority_pkg", "urgent_docs", "medical", "comercio_local", "super_expres", "pasajero_moto"] },
+        "isUrgent": { "type": "boolean" },
+        "distanceKm": { "type": "number" },
+        "baseFare": { "type": "number" },
+        "distanceFare": { "type": "number" },
+        "urgentSurcharge": { "type": "number" },
+        "grossAmount": { "type": "number" },
+        "platformFee": { "type": "number" },
+        "riderNetAmount": { "type": "number" },
+        "usedFreeTrip": { "type": "boolean" },
+        "feeRatePct": { "type": "number" },
+        "status": { "type": "string", "enum": ["completed", "settled"] },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["deliveryId", "riderUid", "riderName", "motoName", "departmentId", "serviceCategory", "serviceType", "isUrgent", "distanceKm", "baseFare", "distanceFare", "urgentSurcharge", "grossAmount", "platformFee", "riderNetAmount", "status", "createdAt"]
+    },
+    "Wallet": {
+      "title": "Wallet",
+      "description": "User wallet balance, 5% commission ledger, experience rank, and free-trip bonuses.",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "balance": { "type": "number" },
+        "totalTopups": { "type": "number" },
+        "totalEarned": { "type": "number" },
+        "totalFeesDeducted": { "type": "number" },
+        "freeTripsBalance": { "type": "integer" },
+        "freeTripsEarned": { "type": "integer" },
+        "freeTripsUsed": { "type": "integer" },
+        "xpPoints": { "type": "number" },
+        "currentRank": { "type": "string", "enum": ["bronce", "plata", "oro", "platino", "diamante", "maestro", "gran_maestro"] },
+        "claimedRewardIds": { "type": "array", "maxItems": 50, "items": { "type": "string" } },
+        "currency": { "type": "string", "minLength": 3, "maxLength": 6 },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["uid", "balance", "totalTopups", "totalEarned", "currency", "updatedAt"]
+    },
+    "QrTopup": {
+      "title": "QrTopup",
+      "description": "QR code or bank account wallet recharge request and verification record.",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "riderName": { "type": "string", "minLength": 1, "maxLength": 80 },
+        "motoName": { "type": "string", "minLength": 1, "maxLength": 80 },
+        "amount": { "type": "number" },
+        "referenceCode": { "type": "string", "minLength": 4, "maxLength": 48 },
+        "qrPayload": { "type": "string", "minLength": 8, "maxLength": 300 },
+        "method": { "type": "string", "enum": ["qr", "bank_transfer"] },
+        "bankName": { "type": "string", "maxLength": 60 },
+        "accountHolder": { "type": "string", "maxLength": 100 },
+        "accountLast4": { "type": "string", "maxLength": 4 },
+        "transferReference": { "type": "string", "maxLength": 64 },
+        "destinationBank": { "type": "string", "maxLength": 100 },
+        "status": { "type": "string", "enum": ["pending", "approved", "rejected"] },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["uid", "riderName", "motoName", "amount", "referenceCode", "qrPayload", "status", "createdAt", "updatedAt"]
+    },
+    "BankAccount": {
+      "title": "BankAccount",
+      "description": "User linked bank account (masked) for wallet top-ups via bank transfer.",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "alias": { "type": "string", "minLength": 2, "maxLength": 60 },
+        "bankName": { "type": "string", "minLength": 2, "maxLength": 60 },
+        "accountHolder": { "type": "string", "minLength": 2, "maxLength": 100 },
+        "accountType": { "type": "string", "enum": ["ahorro", "corriente", "debito", "cheques", "clabe"] },
+        "last4": { "type": "string", "minLength": 4, "maxLength": 4, "pattern": "^[0-9]{4}$" },
+        "clabeMasked": { "type": "string", "minLength": 4, "maxLength": 32 },
+        "isDefault": { "type": "boolean" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["uid", "alias", "bankName", "accountHolder", "accountType", "last4", "clabeMasked", "isDefault", "createdAt", "updatedAt"]
+    },
+    "DeliveryRating": {
+      "title": "DeliveryRating",
+      "description": "Customer or admin star rating and feedback for a delivery.",
+      "type": "object",
+      "properties": {
+        "deliveryId": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "riderUid": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "riderName": { "type": "string", "minLength": 1, "maxLength": 80 },
+        "motoName": { "type": "string", "minLength": 1, "maxLength": 80 },
+        "authorUid": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "authorName": { "type": "string", "minLength": 1, "maxLength": 80 },
+        "score": { "type": "number" },
+        "comment": { "type": "string", "maxLength": 300 },
+        "departmentId": { "type": "string", "minLength": 1, "maxLength": 64 },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["deliveryId", "riderUid", "riderName", "motoName", "authorUid", "authorName", "score", "comment", "departmentId", "createdAt"]
+    },
+    "AppNotification": {
+      "title": "AppNotification",
+      "description": "Persistent real-time notification item per user.",
+      "type": "object",
+      "properties": {
+        "recipientUid": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "title": { "type": "string", "minLength": 2, "maxLength": 100 },
+        "body": { "type": "string", "minLength": 2, "maxLength": 240 },
+        "category": { "type": "string", "enum": ["urgent", "route", "wallet", "rating", "system"] },
+        "read": { "type": "boolean" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["recipientUid", "title", "body", "category", "read", "createdAt"]
+    },
+    "Department": {
+      "title": "Department",
+      "description": "Geographic department / regional expansion zone.",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string", "minLength": 2, "maxLength": 80 },
+        "code": { "type": "string", "minLength": 2, "maxLength": 16 },
+        "centerLat": { "type": "number" },
+        "centerLng": { "type": "number" },
+        "zoom": { "type": "number" },
+        "baseFareMultiplier": { "type": "number" },
+        "active": { "type": "boolean" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["name", "code", "centerLat", "centerLng", "zoom", "baseFareMultiplier", "active", "createdAt", "updatedAt"]
+    },
+    "Merchant": {
+      "title": "Merchant",
+      "description": "Affiliated business / commerce partner for Comercio deliveries.",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string", "minLength": 2, "maxLength": 100 },
+        "category": { "type": "string", "minLength": 2, "maxLength": 60 },
+        "departmentId": { "type": "string", "minLength": 1, "maxLength": 64 },
+        "departmentName": { "type": "string", "minLength": 1, "maxLength": 80 },
+        "address": { "type": "string", "minLength": 3, "maxLength": 240 },
+        "lat": { "type": "number" },
+        "lng": { "type": "number" },
+        "active": { "type": "boolean" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["name", "category", "departmentId", "departmentName", "address", "lat", "lng", "active", "createdAt", "updatedAt"]
+    },
+    "ChatMessage": {
+      "title": "ChatMessage",
+      "description": "Real-time message between passenger/client and motorcycle driver.",
+      "type": "object",
+      "properties": {
+        "deliveryId": { "type": "string", "maxLength": 128 },
+        "deliveryOwnerUid": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "senderUid": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "senderName": { "type": "string", "minLength": 1, "maxLength": 80 },
+        "senderRole": { "type": "string", "enum": ["passenger", "driver", "admin"] },
+        "recipientUid": { "type": "string", "maxLength": 128 },
+        "text": { "type": "string", "minLength": 1, "maxLength": 500 },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["deliveryId", "deliveryOwnerUid", "senderUid", "senderName", "senderRole", "recipientUid", "text", "createdAt"]
+    },
+    "FrequentRoute": {
+      "title": "FrequentRoute",
+      "description": "Saved origin/destination preset route owned by a motorcycle rider for fast delivery creation.",
+      "type": "object",
+      "properties": {
+        "riderUid": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "name": { "type": "string", "minLength": 2, "maxLength": 80 },
+        "serviceCategory": { "type": "string", "enum": ["delivery", "comercio", "super_expres", "pasajero"] },
+        "serviceType": { "type": "string", "enum": ["standard", "express_15", "priority_pkg", "urgent_docs", "medical", "comercio_local", "super_expres", "pasajero_moto"] },
+        "departmentId": { "type": "string", "minLength": 1, "maxLength": 64 },
+        "departmentName": { "type": "string", "minLength": 1, "maxLength": 80 },
+        "pickupAddress": { "type": "string", "minLength": 3, "maxLength": 240 },
+        "pickupLat": { "type": "number" },
+        "pickupLng": { "type": "number" },
+        "dropoffAddress": { "type": "string", "minLength": 3, "maxLength": 240 },
+        "dropoffLat": { "type": "number" },
+        "dropoffLng": { "type": "number" },
+        "defaultCustomerName": { "type": "string", "maxLength": 80 },
+        "defaultNotes": { "type": "string", "maxLength": 300 },
+        "usageCount": { "type": "number" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["riderUid", "name", "serviceCategory", "serviceType", "departmentId", "departmentName", "pickupAddress", "pickupLat", "pickupLng", "dropoffAddress", "dropoffLat", "dropoffLng", "defaultCustomerName", "defaultNotes", "usageCount", "createdAt", "updatedAt"]
+    }
+  },
+  "firestore": {
+    "/admins/{adminId}": {
+      "schema": { "$ref": "#/entities/AdminRecord" },
+      "description": "Trusted administrator registry."
+    },
+    "/riders/{riderId}": {
+      "schema": { "$ref": "#/entities/RiderProfile" },
+      "description": "Public/operational rider & motorcycle unit telemetry without PII."
+    },
+    "/users/{userId}": {
+      "schema": { "$ref": "#/entities/UserPrivateInfo" },
+      "description": "Private user PII and notification settings."
+    },
+    "/settings/{settingId}": {
+      "schema": { "$ref": "#/entities/TariffSettings" },
+      "description": "Platform-wide tariff rules."
+    },
+    "/deliveries/{deliveryId}": {
+      "schema": { "$ref": "#/entities/Delivery" },
+      "description": "Active and historical delivery stops."
+    },
+    "/transactions/{transactionId}": {
+      "schema": { "$ref": "#/entities/Transaction" },
+      "description": "Financial ledger entries per completed delivery."
+    },
+    "/wallets/{walletId}": {
+      "schema": { "$ref": "#/entities/Wallet" },
+      "description": "User saldo and earnings wallet."
+    },
+    "/topups/{topupId}": {
+      "schema": { "$ref": "#/entities/QrTopup" },
+      "description": "QR and bank transfer recharge requests and approvals."
+    },
+    "/bankAccounts/{accountId}": {
+      "schema": { "$ref": "#/entities/BankAccount" },
+      "description": "User linked bank accounts for wallet recharge."
+    },
+    "/ratings/{ratingId}": {
+      "schema": { "$ref": "#/entities/DeliveryRating" },
+      "description": "Delivery ratings and reviews."
+    },
+    "/notifications/{notificationId}": {
+      "schema": { "$ref": "#/entities/AppNotification" },
+      "description": "User notification inbox."
+    },
+    "/departments/{deptId}": {
+      "schema": { "$ref": "#/entities/Department" },
+      "description": "Regional departments for geographic expansion."
+    },
+    "/merchants/{merchantId}": {
+      "schema": { "$ref": "#/entities/Merchant" },
+      "description": "Registered commercial partners for Comercio deliveries."
+    },
+    "/messages/{messageId}": {
+      "schema": { "$ref": "#/entities/ChatMessage" },
+      "description": "Real-time chat messages between clients/passengers and motorcycle drivers."
+    },
+    "/driverApplications/{userId}": {
+      "schema": { "$ref": "#/entities/DriverApplication" },
+      "description": "PII-protected driver onboarding document submissions and 12-hour verification queue."
+    },
+    "/frequentRoutes/{routeId}": {
+      "schema": { "$ref": "#/entities/FrequentRoute" },
+      "description": "Saved frequent origin and destination routes per driver."
+    }
+  }
+}

@@ -1,0 +1,6 @@
+{
+  "name": "Moto Mando",
+  "description": "Plataforma de gestión de rutas de entrega en motocicleta con seguimiento GPS en tiempo real, optimización automática de paradas, panel administrativo y control financiero transparente.",
+  "requestFramePermissions": ["geolocation"],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

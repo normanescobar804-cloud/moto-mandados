@@ -1,0 +1,302 @@
+@import "tailwindcss";
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+@theme {
+  --font-display: "Outfit", system-ui, sans-serif;
+  --font-sans: "Plus Jakarta Sans", system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, monospace;
+}
+
+@layer base {
+  html {
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    -webkit-tap-highlight-color: transparent;
+    overflow-x: clip;
+  }
+
+  body {
+    overflow-x: clip;
+    background-color: #f8fafc;
+    color: #0f172a;
+    transition: background-color 180ms ease, color 180ms ease;
+  }
+
+  html.dark,
+  html.dark body {
+    background-color: #090e1a;
+    color: #f1f5f9;
+  }
+
+  h1, h2, h3, .font-display {
+    font-family: var(--font-display);
+  }
+}
+
+/* ============================================================================
+   Night Delivery Dark Theme (3-tier slate elevation + WCAG AA contrast)
+   ============================================================================ */
+html.dark .dark-canvas,
+html.dark body.bg-slate-50 {
+  background-color: #090e1a;
+}
+
+html.dark ::selection {
+  background-color: rgba(234, 88, 12, 0.35);
+  color: #ffedd5;
+}
+
+html.dark .bg-white:not(.keep-light) {
+  background-color: #111a2c;
+}
+
+html.dark .bg-white\/95:not(.keep-light) {
+  background-color: rgba(17, 26, 44, 0.95);
+}
+
+html.dark .bg-white\/90:not(.keep-light) {
+  background-color: rgba(17, 26, 44, 0.9);
+}
+
+html.dark .bg-white\/70:not(.keep-light) {
+  background-color: rgba(17, 26, 44, 0.72);
+}
+
+html.dark .bg-slate-50:not(.dark-canvas):not(.keep-light),
+html.dark .bg-slate-50\/70:not(.keep-light),
+html.dark .bg-slate-50\/60:not(.keep-light) {
+  background-color: #182338;
+}
+
+html.dark .bg-slate-100:not(.keep-light) {
+  background-color: #0c1322;
+}
+
+html.dark .bg-slate-200:not(.keep-light) {
+  background-color: #1e293b;
+}
+
+/* Active segmented tab inside bg-slate-100 tracks */
+html.dark .bg-slate-100 .bg-white:not(.keep-light) {
+  background-color: #1f2c44;
+  border: 1px solid #334155;
+}
+
+/* Elevated primary slate-900 action pills/buttons in dark mode */
+html.dark button.bg-slate-900,
+html.dark a.bg-slate-900,
+html.dark .bg-slate-900.text-white {
+  background-color: #25334d;
+  border-color: #3b4c6b;
+}
+
+html.dark button.bg-slate-900:hover,
+html.dark a.bg-slate-900:hover {
+  background-color: #2f405e;
+}
+
+/* Typography hierarchy */
+html.dark .text-slate-950 {
+  color: #f8fafc;
+}
+
+html.dark .text-slate-900 {
+  color: #f1f5f9;
+}
+
+html.dark .text-slate-800 {
+  color: #e2e8f0;
+}
+
+html.dark .text-slate-700 {
+  color: #cbd5e1;
+}
+
+html.dark .text-slate-600 {
+  color: #94a3b8;
+}
+
+html.dark .text-slate-500,
+html.dark .text-slate-400 {
+  color: #94a3b8;
+}
+
+/* Preserve legible dark ink inside light-enforced scan/map surfaces */
+html.dark .keep-light {
+  background-color: #ffffff;
+  color: #0f172a;
+}
+
+html.dark .keep-light .text-slate-900 {
+  color: #0f172a;
+}
+
+html.dark .keep-light .text-slate-600 {
+  color: #475569;
+}
+
+html.dark .keep-light .text-slate-500 {
+  color: #64748b;
+}
+
+/* Borders & Dividers */
+html.dark .border-slate-100 {
+  border-color: #1b263b;
+}
+
+html.dark .border-slate-200,
+html.dark .border-slate-200\/90 {
+  border-color: #24324b;
+}
+
+html.dark .border-slate-300 {
+  border-color: #334155;
+}
+
+html.dark .border-slate-900 {
+  border-color: #fb923c;
+}
+
+html.dark .divide-slate-100 > :not(:last-child),
+html.dark .divide-slate-200 > :not(:last-child) {
+  border-color: #24324b;
+}
+
+/* Interactive Hover Surfaces */
+html.dark .hover\:bg-slate-50:hover:not(.keep-light),
+html.dark .hover\:bg-slate-50\/70:hover:not(.keep-light),
+html.dark .hover\:bg-slate-100:hover:not(.keep-light) {
+  background-color: #1e2b42;
+}
+
+html.dark .hover\:text-slate-900:hover:not(.keep-light),
+html.dark .hover\:text-slate-800:hover:not(.keep-light) {
+  color: #f8fafc;
+}
+
+html.dark .hover\:border-slate-300:hover {
+  border-color: #475569;
+}
+
+/* Status Tints & Banners */
+html.dark .bg-emerald-50 {
+  background-color: rgba(16, 185, 129, 0.13);
+}
+
+html.dark .border-emerald-200,
+html.dark .border-emerald-300 {
+  border-color: rgba(16, 185, 129, 0.35);
+}
+
+html.dark .text-emerald-950,
+html.dark .text-emerald-900,
+html.dark .text-emerald-800,
+html.dark .text-emerald-700 {
+  color: #6ee7b7;
+}
+
+html.dark .bg-amber-50 {
+  background-color: rgba(245, 158, 11, 0.14);
+}
+
+html.dark .border-amber-200,
+html.dark .border-amber-300 {
+  border-color: rgba(245, 158, 11, 0.38);
+}
+
+html.dark .text-amber-950,
+html.dark .text-amber-900,
+html.dark .text-amber-800,
+html.dark .text-amber-700 {
+  color: #fcd34d;
+}
+
+html.dark .bg-orange-50 {
+  background-color: rgba(234, 88, 12, 0.15);
+}
+
+html.dark .border-orange-200,
+html.dark .border-orange-300 {
+  border-color: rgba(249, 115, 22, 0.42);
+}
+
+html.dark .text-orange-950,
+html.dark .text-orange-900,
+html.dark .text-orange-800,
+html.dark .text-orange-700 {
+  color: #fdba74;
+}
+
+html.dark .text-orange-600 {
+  color: #fb923c;
+}
+
+html.dark .bg-red-50 {
+  background-color: rgba(239, 68, 68, 0.15);
+}
+
+html.dark .border-red-200,
+html.dark .border-red-300 {
+  border-color: rgba(239, 68, 68, 0.4);
+}
+
+html.dark .text-red-950,
+html.dark .text-red-900,
+html.dark .text-red-800,
+html.dark .text-red-700,
+html.dark .text-red-600 {
+  color: #fca5a5;
+}
+
+html.dark .bg-sky-50 {
+  background-color: rgba(14, 165, 233, 0.14);
+}
+
+html.dark .border-sky-200 {
+  border-color: rgba(56, 189, 248, 0.35);
+}
+
+html.dark .text-sky-900,
+html.dark .text-sky-800,
+html.dark .text-sky-700 {
+  color: #7dd3fc;
+}
+
+/* Native Form Controls */
+html.dark input:not([type='checkbox']):not([type='radio']):not([type='file']):not([type='color']),
+html.dark select,
+html.dark textarea {
+  background-color: #0d1526;
+  border-color: #334155;
+  color: #f1f5f9;
+}
+
+html.dark input::placeholder,
+html.dark textarea::placeholder {
+  color: #64748b;
+}
+
+html.dark select option {
+  background-color: #111a2c;
+  color: #f1f5f9;
+}
+
+.tabular-nums {
+  font-variant-numeric: tabular-nums;
+}
+
+.pb-safe {
+  padding-bottom: max(0.5rem, env(safe-area-inset-bottom));
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+
